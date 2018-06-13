@@ -1,0 +1,46 @@
+#!/usr/bin/expect -f
+
+set force_conservative 0
+
+if {$force_conservative} {
+	set send_slow {1 .1}
+	proc send {ignore arg} {
+		sleep .1
+		exp_send -s -- $arg
+	}
+}
+
+set timeout 30
+
+set file [open "devices.txt"]
+set hosts [split [read -nonewline $file] "\n"]
+close $file
+
+foreach SensorData $hosts {
+	set SENSOR [lindex $SensorData 0]
+    	set PW [lindex $SensorData 1]
+	spawn ssh -o StrictHostKeyChecking=no admin@$SENSOR
+	match_max 100000
+	expect -exact "Password: "
+	send -- "$PW\r"
+	expect -exact "> "
+	send -- "expert\r"
+	expect -exact "\$ "
+	send -- "sudo su\r"
+	expect "Password: "
+	send -- "$PW\r"
+	expect "#"
+	send -- "pmtool status | grep \" - \" | grep sftunnel\r"
+	expect "#"
+	send -- "pmtool restartbyid sftunnel\r"
+	expect "#"
+	send -- "pmtool status | grep \" - \" | grep sftunnel\r"
+	expect "#"
+	send -- "exit\r"
+	expect "$ "
+	send -- "exit\r"
+	expect ">"
+	send -- "exit\r"
+	}
+expect eof
+
